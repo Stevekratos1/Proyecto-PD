@@ -124,25 +124,17 @@ posicionesEnemigos grid =
     , esEnemigo c
     ]
 
-agruparRachas :: Grid -> [(Int, Int, Int)]
-agruparRachas grid =
-    concat
-    [ rachasFila i fila
-    | (i, fila) <- zip [0..] grid
-    ]
+agruparRachas :: String -> [(Int, Int)]
+agruparRachas filaTexto = buscar 0 filaTexto
   where
-    rachasFila :: Int -> String -> [(Int, Int, Int)]
-    rachasFila fila filaTexto = buscar 0 filaTexto
-
-      where
-        buscar :: Int -> String -> [(Int, Int, Int)]
-        buscar _ [] = []
-
-        buscar col xs =
+    buscar :: Int -> String -> [(Int, Int)]
+    buscar _ [] = []
+    buscar col xs
+        | esSolido (head xs) = 
             let (solidos, resto) = span esSolido xs
                 longitud = length solidos
-            in
-                if longitud > 0
-                then (fila, col, longitud)
-                     : buscar (col + longitud) resto
-                else buscar (col + 1) (tail xs)
+            in (col, longitud) : buscar (col + longitud) resto
+        | otherwise = 
+            let (_, resto) = span (not . esSolido) xs
+                noSolidos  = length xs - length resto
+            in buscar (col + noSolidos) resto
