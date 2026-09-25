@@ -1,6 +1,7 @@
+import Test.QuickCheck
 
 
--- DECLARACIONES DE TIPO
+-- DECLARACIONES DE TIPO 
 type Punto  = (Double, Double)
 type Caja   = (Double, Double, Double, Double)
 type Vector = (Double, Double)
@@ -13,34 +14,34 @@ type Grid   = [String]
 sumaVectores :: Punto -> Punto -> Punto
 sumaVectores x y = (fst x + fst y, snd x + snd y)
 
--- Multiplica un vector/punto 2D por un factor escalar.
+-- Multiplica un vector/punto 2D por un factor escalar
 escalarVector :: Double -> Punto -> Punto
 escalarVector x y = (fst y * x, snd y * x)
 
--- Calcula la distancia euclídea entre dos puntos 2D.
+-- Calcula la distancia euclídea entre dos puntos 2D
 distancia :: Punto -> Punto -> Double
 distancia x y = sqrt ((fst x - fst y)^2 + (snd x - snd y)^2)
 
 
 -- EJERCICIO 2: Cajas de colisión
 
--- Extrae el primer componente (Posición X) de una caja.
+-- Extrae el primer componente (Posición X) de una caja
 primero :: Caja -> Double
 primero (x,_,_,_) = x
 
--- Extrae el segundo componente (Posición Y) de una caja.
+-- Extrae el segundo componente (Posición Y) de una caja
 segundo :: Caja -> Double
 segundo (_, y, _, _) = y
 
--- Extrae el tercer componente (Ancho) de una caja.
+-- Extrae el tercer componente (Ancho) de una caja
 tercero :: Caja -> Double
 tercero (_, _, z, _) = z
 
--- Extrae el cuarto componente (Alto) de una caja.
+-- Extrae el cuarto componente (Alto) de una caja
 cuarto :: Caja -> Double
 cuarto (_, _, _, w) = w
 
--- Indica si dos cajas delimitadoras, alineadas con los ejes, se solapan en algún punto..
+-- Indica si dos cajas delimitadoras, alineadas con los ejes, se solapan en algún punto
 solapan :: Caja -> Caja -> Bool
 solapan x y = l1 && l2
     where 
@@ -66,7 +67,7 @@ ladoColision caja1 caja2 = lado
 
 -- EJERCICIO 4: Utilidades de listas y cadenas
 
--- Divide una cadena de texto en subcadenas utilizando un carácter separador dado.
+-- Divide una cadena de texto en subcadenas utilizando un carácter separador dado
 splitOn :: Char -> String -> [String]
 splitOn _ [] = [""]
 splitOn sep (x:xs)
@@ -75,7 +76,7 @@ splitOn sep (x:xs)
   where
     resto = splitOn sep xs
 
--- Elimina los espacios en blanco, tabuladores y saltos al inicio y al final de una cadena.
+-- Elimina los espacios en blanco, tabuladores y saltos al inicio y al final de una cadena
 trim :: String -> String
 trim = trimFinal . trimPrincipio
   where
@@ -86,11 +87,11 @@ trim = trimFinal . trimPrincipio
         | otherwise                                       = x:xs
     trimFinal = reverse . trimPrincipio . reverse
 
--- Cuenta cuántos elementos de una lista cumplen una condición o predicado dado.
+-- Cuenta cuántos elementos de una lista cumplen una condición o predicado dado
 contarSiCumple :: (a -> Bool) -> [a] -> Int
 contarSiCumple condicion lista = sum [1 | x <- lista, condicion x]
 
--- Convierte una lista con al menos dos números Double en un tipo Vector.
+-- Convierte una lista con al menos dos números Double en un tipo Vector
 list2Vector2 :: [Double] -> Vector
 list2Vector2 []      = error "*** Exception: Lista vacia no posible convertir en Vector2"
 list2Vector2 [_]     = error "*** Exception: Falta un elemento en la lista para convertir en Vector2"
@@ -103,7 +104,7 @@ list2Vector2 (x:y:_) = (x,y)
 parsearNivel lineas = lineas
 
 
--- Indica si una celda es una plataforma sólida.
+-- Indica si una celda es una plataforma sólida
 esSolido :: Celda -> Bool
 esSolido '#' = True
 esSolido _   = False
@@ -118,11 +119,11 @@ esVacio :: Celda -> Bool
 esVacio '.' = True
 esVacio _   = False
 
--- Indica si una celda marca el punto de inicio de un enemigo (cualquier carácter que no sea sólido, meta ni vacío).
+-- Indica si una celda marca el punto de inicio de un enemigo (cualquier carácter que no sea sólido, meta ni vacío)
 esEnemigo :: Celda -> Bool
 esEnemigo c = not (esSolido c || esMeta c || esVacio c)
 
--- Dado el nivel completo, devuelve la lista de posiciones (fila, columna) en las que aparece la meta.
+-- Dado el nivel completo, devuelve la lista de posiciones (fila, columna) en las que aparece la meta
 posicionesMeta :: Grid -> [(Int, Int)]
 posicionesMeta grid =
     [ (i, j)
@@ -131,7 +132,7 @@ posicionesMeta grid =
     , esMeta c
     ]
 
--- Encuentra las coordenadas de todos los enemigos junto a su carácter identificador.
+-- Encuentra las coordenadas de todos los enemigos junto a su carácter identificador
 posicionesEnemigos :: Grid -> [(Int, Int, Char)]
 posicionesEnemigos grid =
     [ (i, j, c)
@@ -156,3 +157,52 @@ agruparRachas filaTexto = buscar 0 filaTexto
             let (_, resto) = span (not . esSolido) xs
                 noSolidos  = length xs - length resto
             in buscar (col + noSolidos) resto
+
+
+
+-- SUBTAREA 6: Propiedades QuickCheck 
+
+-- La suma de vectores es conmutativa 
+prop_suma_conmutativa :: Punto -> Punto -> Bool
+prop_suma_conmutativa a b = sumaVectores a b == sumaVectores b a
+       
+
+-- La suma de vectores es asociativa (sumar en un orden u otro da el mismo resultado con tolerancia decimal)
+prop_suma_asociativa :: Punto -> Punto -> Punto -> Bool
+prop_suma_asociativa a b c = distancia (sumaVectores a (sumaVectores b c)) (sumaVectores (sumaVectores a b) c) < 1e-9
+        
+
+-- Escalar un vector por la unidad (1) no altera sus componentes originales
+prop_escalar_neutro :: Punto -> Bool
+prop_escalar_neutro v = escalarVector 1 v == v
+         
+
+-- La distancia geométrica euclídea entre dos puntos en el plano nunca puede ser negativa
+prop_distancia_no_negativa :: Punto -> Punto -> Bool
+prop_distancia_no_negativa a b = distancia a b >= 0
+ 
+
+-- La distancia geométrica es simétrica (la distancia de A a B es idéntica a la de B a A)
+prop_distancia_simetrica :: Punto -> Punto -> Bool
+prop_distancia_simetrica a b = distancia a b == distancia b a
+
+
+-- El solape entre dos cajas delimitadoras es simétrico (si A solapa con B, B solapa con A)
+prop_solapan_simetrica :: Caja -> Caja -> Bool
+prop_solapan_simetrica a b = solapan a b == solapan b a
+   
+
+-- Aplicar la función trim dos veces sobre una cadena produce el mismo resultado que aplicarla una sola vez
+prop_trim_idempotente :: String -> Bool
+prop_trim_idempotente s = trim (trim s) == trim s
+    
+
+-- Si el carácter separador no existe en el texto, splitOn devuelve una lista única con la propia cadena original
+prop_splitOn_sin_separador :: Char -> String -> Property
+prop_splitOn_sin_separador sep s = notElem sep s ==> splitOn sep s == [s]
+     
+
+-- La cantidad de elementos que cumplen un criterio evaluado por contarSiCumple nunca supera la longitud total de la lista
+prop_contarSiCumple_acotado :: [Int] -> Bool
+prop_contarSiCumple_acotado lista = contarSiCumple even lista <= length lista
+      
