@@ -252,12 +252,13 @@ posicionesMetaRec = filaMetaRec 0
 filaMetaRec :: Int -> Grid -> [(Int, Int)]
 filaMetaRec _ [] = []
 filaMetaRec fila (xs:xss) 
-  | or (map esMeta xs) = (posicionMeta fila 0 xs): filaMetaRec (fila + 1) xss
+  | or (map esMeta xs) = posicionMeta fila 0 xs ++ filaMetaRec (fila + 1) xss
   | otherwise = filaMetaRec (fila + 1) xss
 
-posicionMeta :: Int-> Int -> String -> (Int,Int)
+posicionMeta :: Int -> Int -> String -> [(Int, Int)]
+posicionMeta _ _ [] = []
 posicionMeta fila columna (x:xs)
-  | esMeta x = (fila, columna)
+  | esMeta x  = (fila, columna) : posicionMeta fila (columna + 1) xs
   | otherwise = posicionMeta fila (columna + 1) xs
 
 -- FUNCIÓN: posicionesEnemigosRec -> Análoga a posicionesMetaRec, para las posiciones e identificadores de los enemigos.
@@ -268,13 +269,14 @@ posicionesEnemigosRec = filaEnemigosRec 0
 filaEnemigosRec :: Int -> Grid -> [(Int, Int, Char)]
 filaEnemigosRec _ [] = []
 filaEnemigosRec fila (xs:xss) 
-  | or (map esEnemigo xs) = (posicionEnemigo fila 0 xs): filaEnemigosRec (fila + 1) xss
-  | otherwise = filaEnemigosRec (fila + 1) xss
+  | or (map esEnemigo xs) = posicionEnemigo fila 0 xs ++ filaEnemigosRec (fila + 1) xss
+  | otherwise             = filaEnemigosRec (fila + 1) xss
 
-posicionEnemigo :: Int-> Int -> String -> (Int,Int, Char)
+posicionEnemigo :: Int -> Int -> String -> [(Int, Int, Char)]
+posicionEnemigo _ _ [] = []
 posicionEnemigo fila columna (x:xs)
-  | esEnemigo x = (fila, columna, x)
-  | otherwise = posicionEnemigo fila (columna + 1) xs
+  | esEnemigo x = (fila, columna, x) : posicionEnemigo fila (columna + 1) xs
+  | otherwise   = posicionEnemigo fila (columna + 1) xs
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -288,9 +290,9 @@ agruparPorCaracter = agruparPorCaracterAux 0 1
 agruparPorCaracterAux :: Int -> Int -> String -> [(Int, Int, Char)]
 agruparPorCaracterAux _ _ [] = []
 agruparPorCaracterAux fila contador (x:xs) 
-  | null xs = (fila, contador, x): agruparPorCaracterAux fila (contador + 1) xs
+  | null xs      = (fila, contador, x): agruparPorCaracterAux fila (contador + 1) xs
   | x == head xs = agruparPorCaracterAux fila (contador + 1) xs
-  | otherwise = (fila, contador, x) : agruparPorCaracterAux (fila + contador) 1 xs
+  | otherwise    = (fila, contador, x) : agruparPorCaracterAux (fila + contador) 1 xs
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -337,14 +339,15 @@ zipPropio (x:xs) (y:ys) = (x,y) : zipPropio xs ys
 
 esComentarioOVacia:: String -> Bool
 esComentarioOVacia cadena
-  | null cadena || head cadena  == ';' = True
+  | null cadenaLimpia || head cadenaLimpia  == ';' = True
   | otherwise = False
+  where cadenaLimpia = trim cadena
 
 prepararLineas:: [String] -> [String]
 prepararLineas [] = []
 prepararLineas (xs:xss) 
   | esComentarioOVacia xs = prepararLineas xss
-  | otherwise = xs : prepararLineas xss
+  | otherwise = trim xs : prepararLineas xss
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Subtarea 5: mapPropio y filterPropio
@@ -352,7 +355,7 @@ prepararLineas (xs:xss)
 -- FUNCIÓN: mapPropio -> Aplica una función a cada elemento de una lista, devolviendo la lista de resultados en el mismo orden. No podéis usar map de la librería para 
 -- definirla.
 
-mapPropio:: (a -> a) -> [a] -> [a]
+mapPropio:: (a -> b) -> [a] -> [b]
 mapPropio f xs =  [f x | x <- xs]
 
 -- FUNCIÓN: filterPropio -> Se queda con los elementos de una lista que cumplen una condición dada. No podéis usar filter de la librería para definirla.
@@ -392,7 +395,10 @@ foldlPropio f v (x:xs) = foldlPropio f (f v x) xs
 -- Debe implementarse con foldr.
 
 hayColisionConAlguna:: CajaDel -> [CajaDel] -> Bool
-hayColisionConAlguna caja = foldr (\x acc -> solapan caja x || acc)  False
+hayColisionConAlguna caja = foldr (comprobarColision caja)  False
+  where
+    comprobarColision c obst acc = solapan c obst || acc
+
 
 -- foldr es adecuado en este caso porque al asociar por la derecha, se comprueba el elemento actual. Esto hace que si el primer elemento solapa no se tenga que comprobar
 -- el resto de la lista. foldl al acumular por la izquiera, genera una cadena anidada de operaciones que olbiga a recorrer y evaluar la lista entera.
@@ -403,9 +409,14 @@ hayColisionConAlguna caja = foldr (\x acc -> solapan caja x || acc)  False
 -- Debe implementarse con foldl (una función auxiliar para contar dentro de cada fila, combinada
 -- con otra que suma los resultados de todas las filas).
 
-contarCeldasQueCumplen:: (Celda -> Bool) -> Grid -> Integer
-contarCeldasQueCumplen cond xss = foldl (\acc xs -> acc + contarFila xs) 0 xss
-  where contarFila = foldl (\acc x -> if cond x then 1 + acc else acc) 0 
+contarCeldasQueCumplen :: (Celda -> Bool) -> Grid -> Integer
+contarCeldasQueCumplen cond = foldl sumarFila 0
+  where
+    sumarFila acc fila = acc + contarEnFila fila
+    contarEnFila = foldl (contarUnaCelda cond) 0
+    contarUnaCelda cond acc c 
+      | cond c    = acc + 1
+      | otherwise = acc
 
 -- En este caso necesitamos recorrer la lista al completo por lo que la ventaja de foldr no es necesaria. Es por ello que utilizar foldl en este caso es lo adecuado.
 
