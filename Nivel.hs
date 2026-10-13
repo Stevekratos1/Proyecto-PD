@@ -1,6 +1,6 @@
 import Test.QuickCheck
 
-
+-- Tarea 210
 -- DECLARACIONES DE TIPO 
 type Punto  = (Double, Double)
 type Caja   = (Double, Double, Double, Double)
