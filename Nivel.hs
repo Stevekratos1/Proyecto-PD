@@ -206,3 +206,94 @@ prop_splitOn_sin_separador sep s = notElem sep s ==> splitOn sep s == [s]
 prop_contarSiCumple_acotado :: [Int] -> Bool
 prop_contarSiCumple_acotado lista = contarSiCumple even lista <= length lista
       
+
+-- Tarea 2
+
+posicionesMetaRec :: Grid -> [(Int, Int)]
+posicionesMetaRec grid = buscarFilasMeta 0 grid
+  where
+    buscarFilasMeta _ [] = []
+    buscarFilasMeta f (r:rs) = buscarColsMeta f 0 r ++ buscarFilasMeta (f + 1) rs
+
+    buscarColsMeta _ _ [] = []
+    buscarColsMeta f c (x:xs)
+      | esMeta x  = (f, c) : buscarColsMeta f (c + 1) xs
+      | otherwise = buscarColsMeta f (c + 1) xs
+
+posicionesEnemigosRec :: Grid -> [(Int, Int, Char)]
+posicionesEnemigosRec grid = buscarFilasEnemigos 0 grid
+  where
+    buscarFilasEnemigos _ [] = []
+    buscarFilasEnemigos f (r:rs) = buscarColsEnemigos f 0 r ++ buscarFilasEnemigos (f + 1) rs
+
+    buscarColsEnemigos _ _ [] = []
+    buscarColsEnemigos f c (x:xs)
+      | esEnemigo x = (f, c, x) : buscarColsEnemigos f (c + 1) xs
+      | otherwise   = buscarColsEnemigos f (c + 1) xs
+
+agruparPorCaracter :: String -> [(Int, Int, Char)]
+agruparPorCaracter filaTexto = buscar 0 filaTexto
+  where
+    buscar _ [] = []
+    buscar col (x:xs) = (col, longitud + 1, x) : buscar (col + longitud + 1) resto
+      where
+        longitud = length (takeWhile (== x) xs)
+        resto    = dropWhile (== x) xs
+
+simularCaidaLibre :: Int -> Double -> (Double, Double) -> [(Double, Double)]
+simularCaidaLibre 0 _ (y, v) = [(y, v)]
+simularCaidaLibre n g (y, v) = (y, v) : simularCaidaLibre (n - 1) g (y + vSiguiente, vSiguiente)
+  where
+    vSiguiente = v + g
+
+zipPropio :: [a] -> [b] -> [(a, b)]
+zipPropio [] _          = []
+zipPropio _ []          = []
+zipPropio (x:xs) (y:ys) = (x, y) : zipPropio xs ys
+
+esComentarioOVacia :: String -> Bool
+esComentarioOVacia [] = True
+esComentarioOVacia (x:xs)
+    | x == ' '  = esComentarioOVacia xs
+    | x == ';'  = True
+    | otherwise = False
+
+prepararLineas :: [String] -> [String]
+prepararLineas [] = []
+prepararLineas (l:ls)
+    | esComentarioOVacia l = prepararLineas ls
+    | otherwise            = quitarEspaciosInicio l : prepararLineas ls
+  where
+    quitarEspaciosInicio [] = []
+    quitarEspaciosInicio (x:xs) = if x == ' ' then quitarEspaciosInicio xs else x:xs
+
+mapPropio :: (a -> b) -> [a] -> [b]
+mapPropio _ []     = []
+mapPropio f (x:xs) = f x : mapPropio f xs
+
+filterPropio :: (a -> Bool) -> [a] -> [a]
+filterPropio _ [] = []
+filterPropio p (x:xs)
+  | p x       = x : filterPropio p xs
+  | otherwise = filterPropio p xs
+
+foldrPropio :: (a -> b -> b) -> b -> [a] -> b
+foldrPropio _ v []     = v
+foldrPropio f v (x:xs) = f x (foldrPropio f v xs)
+
+foldlPropio :: (b -> a -> b) -> b -> [a] -> b
+foldlPropio _ ac []     = ac
+foldlPropio f ac (x:xs) = foldlPropio f (f ac x) xs
+
+
+hayColisionConAlguna :: Caja -> [Caja] -> Bool
+hayColisionConAlguna jugador obstaculos = foldr colisionaConFalse False obstaculos
+  where
+    colisionaConFalse obstaculo ac = solapan jugador obstaculo || ac
+
+
+contarCeldasQueCumplen :: (Char -> Bool) -> Grid -> Int
+contarCeldasQueCumplen condicion grid = foldl contarFila 0 grid
+  where
+    contarFila ac totalFila = foldl evaluarCelda ac totalFila
+    evaluarCelda acumuladorCaracter c = if condicion c then acumuladorCaracter + 1 else acumuladorCaracter
